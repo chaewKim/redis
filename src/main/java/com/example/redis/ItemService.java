@@ -23,7 +23,7 @@ public class ItemService {
         this.itemRepository = itemRepository;
     }
 
-
+    @CachePut(cacheNames = "itemCache", key = "#result.id")
     public ItemDto create(ItemDto dto) {
         return ItemDto.fromEntity(itemRepository.save(Item.builder()
                 .name(dto.getName())
@@ -31,7 +31,7 @@ public class ItemService {
                 .price(dto.getPrice())
                 .build()));
     }
-
+    @Cacheable(cacheNames="itemAllCache", key ="methodName")
     public List<ItemDto> readAll() {
         return itemRepository.findAll()
                 .stream()
@@ -48,7 +48,8 @@ public class ItemService {
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
-
+    @CachePut(cacheNames = "itemCache", key = "args[0]")
+    @CacheEvict(cacheNames = "itemAllCache", allEntries = true)
     public ItemDto update(Long id, ItemDto dto) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -62,4 +63,13 @@ public class ItemService {
         itemRepository.deleteById(id);
     }
 
+    
+    @Cacheable(
+            cacheNames = "itemSearchCache",
+            key = "{ args[0], args[1].pageNumber, args[1].pageSize }"
+    )
+    public Page<ItemDto> searchByName(String query, Pageable pageable) {
+        return itemRepository.findAllByNameContains(query, pageable)
+                .map(ItemDto::fromEntity);
+    }
 }
